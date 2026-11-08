@@ -60,6 +60,10 @@ func GetEvent(ctx context.Context, season *kmf1.Season, identifier any) (*kmf1.E
 	return season.Event(ctx, identifier)
 }
 
+func GetTestingEvent(ctx context.Context, season *kmf1.Season, n int) (*kmf1.Event, error) {
+	return season.TestingEvent(ctx, n)
+}
+
 func GetTeamStyle[T any](season interface {
 	TeamStyle(string) (T, bool)
 }, identifier string) (T, bool) {

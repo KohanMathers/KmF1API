@@ -18,6 +18,8 @@ type sessionCache struct {
 type sessionCacheKey struct {
 	year        int
 	round       int
+	event       string
+	eventStart  time.Time
 	sessionType string
 }
 

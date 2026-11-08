@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	kmf1 "github.com/KohanMathers/KmF1/go"
 )
@@ -304,10 +306,15 @@ func pathYear(w http.ResponseWriter, r *http.Request) (int, bool) {
 	return year, true
 }
 
+type testingEvent int
+
 func pathEventIdentifier(r *http.Request) any {
 	raw := r.PathValue("event")
 	if n, err := strconv.Atoi(raw); err == nil {
 		return n
+	}
+	if n, ok := parseTestingIdentifier(raw); ok {
+		return testingEvent(n)
 	}
 	if name, ok := eventAliases[strings.ToLower(raw)]; ok {
 		return name
@@ -315,13 +322,51 @@ func pathEventIdentifier(r *http.Request) any {
 	return raw
 }
 
-func pathSessionType(w http.ResponseWriter, r *http.Request) (string, bool) {
-	sessionType, ok := sessionSlugs[strings.ToLower(r.PathValue("session"))]
-	if !ok {
-		writeError(w, http.StatusBadRequest, "unknown session type: "+r.PathValue("session"))
-		return "", false
+func parseTestingIdentifier(raw string) (int, bool) {
+	s := strings.ToLower(raw)
+	for _, prefix := range []string{"testing", "test"} {
+		if !strings.HasPrefix(s, prefix) {
+			continue
+		}
+		rest := strings.TrimLeft(strings.TrimPrefix(s, prefix), "-_")
+		if rest == "" {
+			return 1, true
+		}
+		if n, err := strconv.Atoi(rest); err == nil && n > 0 {
+			return n, true
+		}
+		return 0, false
 	}
-	return sessionType, true
+	return 0, false
+}
+
+func pathSessionType(w http.ResponseWriter, r *http.Request, event *kmf1.Event) (string, bool) {
+	raw := r.PathValue("session")
+	if sessionType, ok := sessionSlugs[strings.ToLower(raw)]; ok {
+		return sessionType, true
+	}
+
+	want := normalizeSessionName(raw)
+	sessions := GetEventSessions(event)
+	names := make([]string, len(sessions))
+	for i, s := range sessions {
+		if normalizeSessionName(s.SessionType) == want {
+			return s.SessionType, true
+		}
+		names[i] = s.SessionType
+	}
+	writeError(w, http.StatusNotFound, "unknown session "+strconv.Quote(raw)+"; this event has: "+strings.Join(names, ", "))
+	return "", false
+}
+
+func normalizeSessionName(s string) string {
+	return strings.Map(func(r rune) rune {
+		switch r {
+		case ' ', '-', '_':
+			return -1
+		}
+		return unicode.ToLower(r)
+	}, s)
 }
 
 type link struct {
@@ -346,7 +391,20 @@ func (h *apiHandler) loadEvent(ctx context.Context, w http.ResponseWriter, r *ht
 		writeError(w, http.StatusBadGateway, err.Error())
 		return nil, false
 	}
-	event, err := GetEvent(ctx, season, pathEventIdentifier(r))
+	var event *kmf1.Event
+	var err error
+	switch id := pathEventIdentifier(r).(type) {
+	case testingEvent:
+		event, err = GetTestingEvent(ctx, season, int(id))
+	case int:
+		if id == 0 {
+			err = fmt.Errorf("round 0 is used by testing events; address them as testing-1, testing-2, ...")
+			break
+		}
+		event, err = GetEvent(ctx, season, id)
+	default:
+		event, err = GetEvent(ctx, season, id)
+	}
 	if err != nil {
 		writeError(w, http.StatusNotFound, err.Error())
 		return nil, false
@@ -360,7 +418,7 @@ func (h *apiHandler) loadSession(ctx context.Context, w http.ResponseWriter, r *
 	if !ok {
 		return nil, false
 	}
-	sessionType, ok := pathSessionType(w, r)
+	sessionType, ok := pathSessionType(w, r, event)
 	if !ok {
 		return nil, false
 	}
@@ -371,7 +429,11 @@ func (h *apiHandler) loadSession(ctx context.Context, w http.ResponseWriter, r *
 	}
 
 	info := GetEventInfo(event)
-	key := sessionCacheKey{year: info.Season, round: info.RoundNumber, sessionType: sessionType}
+	key := sessionCacheKey{year: info.Season, round: info.RoundNumber, event: info.EventName, sessionType: sessionType}
+	if len(info.Sessions) > 0 {
+		// Testing events share round 0 and can share a name, so the start time tells them apart.
+		key.eventStart = info.Sessions[0].StartDateUtc
+	}
 	session, err := h.sessions.getOrLoad(ctx, key, func() (*kmf1.Session, error) {
 		return LoadSession(ctx, ref)
 	})
