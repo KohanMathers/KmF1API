@@ -217,7 +217,11 @@ func GetDriverLap(driver *kmf1.Driver, n int) (*kmf1.Lap, bool) {
 }
 
 func GetDriverTelemetry[T any](driver interface{ Telemetry() []T }) []T {
-	return driver.Telemetry()
+	t := driver.Telemetry()
+	if t == nil {
+		return []T{}
+	}
+	return t
 }
 
 func GetDriverIntervals[T any](driver interface{ Intervals() []T }) []T {
@@ -237,7 +241,11 @@ func GetDriverTeamRadio[T any](driver interface{ TeamRadio() []T }) []T {
 }
 
 func GetLapTelemetry[T any](lap interface{ Telemetry() []T }) []T {
-	return lap.Telemetry()
+	t := lap.Telemetry()
+	if t == nil {
+		return []T{}
+	}
+	return t
 }
 
 func GetCircuitCorners[T any](ctx context.Context, circuit interface {

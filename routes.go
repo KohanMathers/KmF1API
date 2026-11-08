@@ -431,11 +431,12 @@ func (h *apiHandler) loadSession(ctx context.Context, w http.ResponseWriter, r *
 	info := GetEventInfo(event)
 	key := sessionCacheKey{year: info.Season, round: info.RoundNumber, event: info.EventName, sessionType: sessionType}
 	if len(info.Sessions) > 0 {
-		// Testing events share round 0 and can share a name, so the start time tells them apart.
 		key.eventStart = info.Sessions[0].StartDateUtc
 	}
 	session, err := h.sessions.getOrLoad(ctx, key, func() (*kmf1.Session, error) {
-		return LoadSession(ctx, ref)
+		loadCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Hour)
+		defer cancel()
+		return LoadSession(loadCtx, ref)
 	})
 	if err != nil {
 		writeError(w, http.StatusBadGateway, err.Error())
