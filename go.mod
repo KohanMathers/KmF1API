@@ -2,7 +2,7 @@ module kmf1api
 
 go 1.26
 
-require github.com/KohanMathers/KmF1/go v1.3.2
+require github.com/KohanMathers/KmF1/go v1.3.3
 
 require (
 	github.com/coder/websocket v1.8.15 // indirect
