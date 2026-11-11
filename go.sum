@@ -1,5 +1,5 @@
-github.com/KohanMathers/KmF1/go v1.3.1 h1:4t90tOqtJe18H5Y4eVZ/Z9SSTjGZEGBC5NvRfvH8FLc=
-github.com/KohanMathers/KmF1/go v1.3.1/go.mod h1:vQqUKn8pxLIi4cbwmhOg0KDtGehbvDUnDWVNtA9jw70=
+github.com/KohanMathers/KmF1/go v1.3.2 h1:hVb1vaFHRBwHmue5k+Obz2V3QE33htfIoKTYyA6XMVU=
+github.com/KohanMathers/KmF1/go v1.3.2/go.mod h1:vQqUKn8pxLIi4cbwmhOg0KDtGehbvDUnDWVNtA9jw70=
 github.com/coder/websocket v1.8.15 h1:6B2JPeOGlpff2Uz6vOEH1Vzpi0iUz20A+lPVhPHtNUA=
 github.com/coder/websocket v1.8.15/go.mod h1:NX3SzP+inril6yawo5CQXx8+fk145lPDC6pumgx0mVg=
 github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=
